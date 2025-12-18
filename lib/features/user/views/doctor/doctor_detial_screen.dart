@@ -6,6 +6,7 @@ import '../../../../shared/services/api_service.dart';
 import '../../models/doctor_detail_model.dart';
 import '../appointment/book_appointment_screen.dart';
 
+
 class DoctorDetailsScreen extends StatefulWidget {
   final String doctorId;
   const DoctorDetailsScreen({super.key, required this.doctorId});

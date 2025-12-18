@@ -345,57 +345,57 @@ class OfferCard extends StatelessWidget {
     );
   }
 }
-/// ---------------- AI Bottom Bar ----------------
-class CareAIBar extends StatelessWidget {
-  final VoidCallback onTap;
-  const CareAIBar({super.key, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(30),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(30),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-          decoration: BoxDecoration(
-            color: kTealDark,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.18),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: Row(
-            children: const [
-              CircleAvatar(
-                radius: 16,
-                backgroundImage: NetworkImage(
-                  "https://cdn-icons-png.flaticon.com/512/4712/4712027.png",
-                ),
-              ),
-              SizedBox(width: 10),
-              Text(
-                "Ask Care AI",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Spacer(),
-              Icon(Icons.chat_bubble_outline, color: Colors.white, size: 18),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// /// ---------------- AI Bottom Bar ----------------
+// class CareAIBar extends StatelessWidget {
+//   final VoidCallback onTap;
+//   const CareAIBar({super.key, required this.onTap});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Material(
+//       color: Colors.transparent,
+//       borderRadius: BorderRadius.circular(30),
+//       child: InkWell(
+//         borderRadius: BorderRadius.circular(30),
+//         onTap: onTap,
+//         child: Container(
+//           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+//           decoration: BoxDecoration(
+//             color: kTealDark,
+//             borderRadius: BorderRadius.circular(30),
+//             boxShadow: [
+//               BoxShadow(
+//                 color: Colors.black.withOpacity(0.18),
+//                 blurRadius: 10,
+//                 offset: const Offset(0, 4),
+//               )
+//             ],
+//           ),
+//           child: Row(
+//             children: const [
+//               CircleAvatar(
+//                 radius: 16,
+//                 backgroundImage: NetworkImage(
+//                   "https://cdn-icons-png.flaticon.com/512/4712/4712027.png",
+//                 ),
+//               ),
+//               SizedBox(width: 10),
+//               Text(
+//                 "Ask Care AI",
+//                 style: TextStyle(
+//                   color: Colors.white,
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//               ),
+//               Spacer(),
+//               Icon(Icons.chat_bubble_outline, color: Colors.white, size: 18),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 /// ---- Box Shadow Common ----
 BoxDecoration boxWhite() => BoxDecoration(

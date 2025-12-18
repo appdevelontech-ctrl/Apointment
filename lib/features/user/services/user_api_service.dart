@@ -7,6 +7,7 @@ import '../models/hospital_model.dart';
 
 class UserApiService {
   static const baseUrl = "https://hospitalquee.onrender.com";
+  static const String googlePlacesKey = 'AIzaSyCcppZWLo75ylSQvsR-bTPZLEFEEec5nrY';
 
   // =========================================================
   // SEND OTP
