@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'package:appointment_app/features/user/views/profile_screen.dart';
+import 'package:appointment_app/features/user/views/profilescreeen.dart';
 import 'package:appointment_app/features/user/views/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -114,6 +115,36 @@ class _DashboardScreenState extends State<UserDashboardScreen>
       debugPrint("No action defined for: $url");
     }
   }
+  IconData getServiceIcon(String title) {
+    switch (title.toLowerCase()) {
+      case 'doctor':
+      case 'doctors':
+        return Icons.medical_services;
+
+      case 'hospital':
+      case 'hospitals':
+        return Icons.local_hospital;
+
+      case 'lab test':
+      case 'lab tests':
+        return Icons.science;
+
+      case 'medicine':
+      case 'medicines':
+        return Icons.medication;
+
+      case 'appointment':
+        return Icons.calendar_month;
+
+      case 'online consultation':
+        return Icons.video_call;
+
+      default:
+        return Icons.health_and_safety;
+    }
+  }
+
+
 
   // Optimized image loader with RepaintBoundary and lighter placeholder
   Widget _buildCachedImage({
@@ -178,54 +209,36 @@ class _DashboardScreenState extends State<UserDashboardScreen>
       ),
     );
   }
-
-  // New method for hospital image - uses asset if no profile
-  Widget _buildHospitalImage(String? profileUrl, double height, double width) {
-    if (profileUrl?.isNotEmpty != true) {
-      // Use asset image for fast loading
-      return ClipRRect(
+  Widget _buildHospitalAsset(double height) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4FAF9), // 🔥 soft medical bg
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+          topLeft: Radius.circular(18),
+          topRight: Radius.circular(18),
         ),
-        child: Container(
-          height: height,
-          width: width,
-          child: Image.asset(
-            'assets/images/hospital-building.png',
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to icon if asset fails
-              return Container(
-                height: height,
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.local_hospital, size: 35),
-              );
-            },
-          ),
-        ),
-      );
-    }
-    // Use network if profile exists
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(16),
-        topRight: Radius.circular(16),
       ),
-      child: _buildCachedImage(
-        imageUrl: profileUrl,
-        height: height,
-        width: width,
-        fit: BoxFit.cover,
-        useShimmer: true,
-        fallbackWidget: Container(
-          height: height,
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.local_hospital, size: 35),
+      child: Center(
+        child: Image.asset(
+          'assets/icons/hospital_1217730.png',
+          height: height * 0.6, // 🔥 responsive icon size
+          width: height * 0.6,
+          fit: BoxFit.contain, // ✅ IMPORTANT
+          errorBuilder: (_, __, ___) {
+            return const Icon(
+              Icons.local_hospital,
+              size: 40,
+              color: kTeal,
+            );
+          },
         ),
       ),
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -364,9 +377,25 @@ class _DashboardScreenState extends State<UserDashboardScreen>
                 border: Border.all(color: Colors.white.withOpacity(0.3)),
               ),
               child: IconButton(
-                onPressed: () {}, // TODO: Navigate to profile
-                icon: const Icon(Icons.person_outline, color: Colors.white, size: 22),
+                onPressed: () {
+                  if (userData == null || userData!["userId"] == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("User not found, please login again")),
+                    );
+                    return;
+                  }
+
+                  SmoothNavigator.push(
+                    context,
+                    ProfileDetailsScreen(
+                      userId: userData!["userId"],
+                    ),
+                  );
+                },
+
+                icon: const Icon(Icons.person_outline, color: Colors.white),
               ),
+
             ),
           ],
         ),
@@ -390,19 +419,98 @@ class _DashboardScreenState extends State<UserDashboardScreen>
     );
   }
 
+  String normalize(String text) {
+    return text
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  String getPopularServiceIconAsset(String title) {
+    final key = normalize(title);
+
+    const map = {
+      'instant video consultation': 'assets/icons/telemedicine_9970212.png',
+      'find doctors near you': 'assets/icons/doctor_872098.png',
+      'lab tests': 'assets/icons/chemistry_5398776.png',
+      'surgeries': 'assets/icons/analysis_18494392.png',
+      'find hospital near you': 'assets/icons/hospital_1217730.png',
+    };
+
+    return map[key] ?? 'assets/icons/doctor_872098.png';
+  }
+
+  Widget popularServiceItem({
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Image.asset(
+              getPopularServiceIconAsset(title),
+              height: 64, // 🔥 BIGGER ICON
+              width: 64,
+              fit: BoxFit.contain,
+            ),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                height: 1.25,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double getHospitalRating(dynamic rating) {
+    if (rating == null) return 4.5; // fallback
+    if (rating is num) return rating.toDouble();
+    return 4.5;
+  }
+
+
+
   Widget _mainContent() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Consumer<HomeController>(
+      child:
+      Consumer<HomeController>(
         builder: (context, home, _) {
           if (home.isLoading || home.homeLayout == null) {
             return const Column(
               children: [
-                SizedBox(height: 140, child: DashboardShimmerOptimized()),
+                const SliderShimmer(),
+                const SizedBox(height: 8),
+                const ServiceGridShimmer(),
+                const SizedBox(height: 8),
+                const DoctorShimmer(),
+
                 SizedBox(height: 8),
-                SizedBox(height: 160, child: DashboardShimmerOptimized(grid: true)),
-                SizedBox(height: 8),
-                SizedBox(height: 180, child: HospitalShimmer()), // Custom shimmer for hospitals
+                const HospitalShimmer(),
               ],
             );
           }
@@ -414,7 +522,8 @@ class _DashboardScreenState extends State<UserDashboardScreen>
               RepaintBoundary(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: _buildCachedImage(
+                  child:
+                  _buildCachedImage(
                     imageUrl: layout.sliderImg,
                     height: 160,
                     width: double.infinity,
@@ -438,76 +547,41 @@ class _DashboardScreenState extends State<UserDashboardScreen>
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              SizedBox(
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: layout.trendingBanner.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    childAspectRatio: 1.05,
-                  ),
-                  itemBuilder: (_, i) {
-                    final b = layout.trendingBanner[i];
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => _handleTrendingTap(b.url),
-                      child: Container( // Simplified to Container for perf (no AnimatedContainer)
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Colors.white, Color(0xFFF8F9FA)], // Lighter grey
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kTeal.withOpacity(0.08), // Lighter shadow
-                              blurRadius: 6, // Reduced blur
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: _buildCachedImage(
-                                imageUrl: b.image,
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                memCacheHeight: 200, // Smaller
-                                fallbackWidget: Container(
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(Icons.category, size: 35, color: Colors.grey),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-                              child: Text(
-                                b.title,
-                                maxLines: 2,
-                                textAlign: TextAlign.center,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth;
+
+                  int crossAxisCount = 2;
+                  if (width >= 900) {
+                    crossAxisCount = 4;
+                  } else if (width >= 600) {
+                    crossAxisCount = 3;
+                  }
+
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: layout.trendingBanner.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 1.3, // 🔥 balanced height
+                    ),
+                    itemBuilder: (_, i) {
+                      final b = layout.trendingBanner[i];
+                      return popularServiceItem(
+                        title: b.title,
+                        onTap: () => _handleTrendingTap(b.url),
+                      );
+                    },
+                  );
+                },
               ),
+
+
+
+
               const SizedBox(height: 12),
               // HOSPITALS - Simplified animation
               const Text(
@@ -515,93 +589,159 @@ class _DashboardScreenState extends State<UserDashboardScreen>
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
+
               if (home.hospitals.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text("No hospitals found ❗", style: TextStyle(color: Colors.grey)),
+                  child: Text(
+                    "No hospitals found ❗",
+                    style: TextStyle(color: Colors.grey),
+                  ),
                 )
               else
-                SizedBox(
-                  height: 180,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    itemExtent: 150,
-                    itemCount: home.hospitals.length.clamp(0, 6),
-                    itemBuilder: (_, i) {
-                      final h = home.hospitals[i];
-                      return GestureDetector(
-                        onTap: () {
-                          SmoothNavigator.push(
-                            context,
-                            HospitalDetailScreen(hospitalId: h.id),
-                          );
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cardWidth = constraints.maxWidth < 360 ? 145.0 : 160.0;
+                    final cardHeight = constraints.maxWidth < 360 ? 205.0 : 220.0;
 
-                        },
+                    return SizedBox(
+                      height: cardHeight,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: home.hospitals.length.clamp(0, 6),
+                        itemBuilder: (_, i) {
+                          final h = home.hospitals[i];
 
-                        child: Container( // No AnimatedContainer
-                          width: 150,
-                          margin: const EdgeInsets.only(right: 10),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(colors: [Colors.white, Color(0xFFF8F9FA)]),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04), // Much lighter
-                                offset: const Offset(0, 2),
-                                blurRadius: 6,
+                          return GestureDetector(
+                            onTap: () {
+                              SmoothNavigator.push(
+                                context,
+                                HospitalDetailScreen(hospitalId: h.id),
+                              );
+                            },
+                            child: Container(
+                              width: cardWidth,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              // Use new method for fast asset fallback
-                              _buildHospitalImage(h.profile, 90, double.infinity),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        h.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.location_on, size: 12, color: kTeal),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              h.city ?? "Unknown",
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: Colors.grey.shade600,
-                                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ---------- IMAGE ----------
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(18),
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        _buildHospitalAsset(90),
+                                        Container(
+                                          height: 95,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.black.withOpacity(0.25),
+                                              ],
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+
+                                  // ---------- CONTENT ----------
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Name
+                                        Text(
+                                          h.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+
+                                        const SizedBox(height: 4),
+
+                                        // Location
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.location_on,
+                                                size: 13, color: kTeal),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                h.city ?? "Unknown",
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey.shade600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+
+                                        const SizedBox(height: 8),
+
+
+
+
+
+                                        // CTA
+                                        Container(
+                                          width: double.infinity,
+                                          padding:
+                                          const EdgeInsets.symmetric(vertical: 6),
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: kTeal.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: const Text(
+                                            "View Details",
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: kTeal,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
+
+
               const SizedBox(height: 12),
+
               // DOCTORS - Optimized with shimmer and lighter perf
               const Text(
                 "Top Doctors",
@@ -615,88 +755,106 @@ class _DashboardScreenState extends State<UserDashboardScreen>
                 )
               else
                 SizedBox(
-                  height: 190,
+                  height: 200,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
-                    itemExtent: 140,
                     itemCount: home.doctors.length.clamp(0, 5),
                     itemBuilder: (_, index) {
                       final d = home.doctors[index];
+
                       return GestureDetector(
                         onTap: () {
                           SmoothNavigator.push(
                             context,
                             DoctorDetailsScreen(doctorId: d.id),
                           );
-
                         },
-                        child: Container( // Simplified
-                          width: 140,
-                          margin: const EdgeInsets.only(right: 10),
-                          padding: const EdgeInsets.all(8),
+                        child: Container(
+                          width: 155,
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.white, Colors.blue.shade50], // Lighter blue
-                            ),
-                            borderRadius: BorderRadius.circular(16),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
                             boxShadow: [
                               BoxShadow(
-                                color: kTeal.withOpacity(0.1), // Lighter
-                                blurRadius: 6, // Reduced
-                                offset: const Offset(0, 2),
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
                           child: Column(
                             children: [
+                              // ---------- PROFILE IMAGE ----------
                               ClipOval(
-                                child: _buildCachedImage(
-                                  imageUrl: d.profile,
-                                  height: 80,
-                                  width: 80,
-                                  fit: BoxFit.cover,
-                                  useShimmer: true, // Enable shimmer for doctors to show loading
-                                  fallbackWidget: Container(
-                                    height: 80,
-                                    width: 80,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.grey,
-                                      shape: BoxShape.circle,
+                                child: RepaintBoundary(
+                                  child: _buildCachedImage(
+                                    imageUrl: d.profile,
+                                    height: 84,
+                                    width: 84,
+                                    fit: BoxFit.cover,
+                                    memCacheHeight: 160,
+                                    fallbackWidget: Container(
+                                      height: 84,
+                                      width: 84,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEFF6F5),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.person,
+                                        size: 40,
+                                        color: kTeal,
+                                      ),
                                     ),
-                                    child: const Icon(Icons.person, size: 40, color: Colors.white),
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 12),
+
+                              // ---------- NAME ----------
                               Text(
                                 d.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
+
                               const SizedBox(height: 4),
+
+                              // ---------- EXPERIENCE ----------
                               Text(
-                                "${d.experience} yrs exp",
-                                style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                "${d.experience} yrs experience",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                ),
                               ),
-                              const SizedBox(height: 8),
+
+                              const Spacer(),
+
+                              // ---------- CTA ----------
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: kTeal,
-                                  borderRadius: BorderRadius.circular(16),
+                                  color: kTeal.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: const Text(
-                                  "Book",
+                                  "Book Appointment",
                                   style: TextStyle(
-                                    color: Colors.white,
                                     fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
+                                    color: kTeal,
                                   ),
                                 ),
                               ),
@@ -707,6 +865,7 @@ class _DashboardScreenState extends State<UserDashboardScreen>
                     },
                   ),
                 ),
+
               const SizedBox(height: 16),
               const PromoSurgeries(),
               const SizedBox(height: 20),
@@ -716,6 +875,8 @@ class _DashboardScreenState extends State<UserDashboardScreen>
       ),
     );
   }
+
+
 
   Widget _profileDrawer() {
     final name = userData?["name"] ?? "Guest User";
@@ -832,6 +993,25 @@ class _DashboardScreenState extends State<UserDashboardScreen>
     );
   }
 }
+class SliderShimmer extends StatelessWidget {
+  const SliderShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 140,
+      child: shimmerWrapper(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // Optimized Shimmer
 class DashboardShimmerOptimized extends StatelessWidget {
@@ -893,106 +1073,245 @@ class DashboardShimmerOptimized extends StatelessWidget {
     );
   }
 }
+Widget shimmerWrapper({required Widget child}) {
+  return Shimmer.fromColors(
+    baseColor: Colors.grey.shade300,
+    highlightColor: Colors.grey.shade100,
+    period: const Duration(milliseconds: 1400), // 🔥 smooth shimmer
+    child: child,
+  );
+}
 
-// Custom Shimmer for Hospitals using asset image
+
+class ServiceGridShimmer extends StatelessWidget {
+  const ServiceGridShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return shimmerWrapper(
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: 4,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.3,
+        ),
+        itemBuilder: (_, __) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Icon placeholder
+                Container(
+                  height: 48,
+                  width: 48,
+                  decoration: const BoxDecoration(
+                    color: Colors.grey,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+
+                // Title line
+                Container(
+                  height: 12,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+
+class DoctorShimmer extends StatelessWidget {
+  const DoctorShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 200,
+      child: shimmerWrapper(
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: 3,
+          itemBuilder: (_, __) {
+            return Container(
+              width: 155,
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                children: [
+                  // Profile circle
+                  Container(
+                    height: 84,
+                    width: 84,
+                    decoration: const BoxDecoration(
+                      color: Colors.grey,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Name
+                  Container(
+                    height: 14,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Experience
+                  Container(
+                    height: 12,
+                    width: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // CTA
+                  Container(
+                    height: 28,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+
 class HospitalShimmer extends StatelessWidget {
   const HospitalShimmer({super.key});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 180,
-      child: Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
+      height: 220,
+      child: shimmerWrapper(
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          itemExtent: 150,
           itemCount: 3,
-          itemBuilder: (_, __) => Container(
-            width: 150,
-            margin: const EdgeInsets.only(right: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                // Shimmer with asset image overlay
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Asset image as base
-                      Image.asset(
-                        'assets/images/hospital-building.png',
-                        height: 90,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+          itemBuilder: (_, __) {
+            return Container(
+              width: 160,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ---------- IMAGE PLACEHOLDER ----------
+                  Container(
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(18),
                       ),
-                      // Shimmer overlay for loading effect
-                      Container(
-                        height: 90,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.transparent,
-                              Colors.white.withOpacity(0.7),
-                              Colors.transparent,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
+
+                  Padding(
+                    padding: const EdgeInsets.all(10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Hospital Name
                         Container(
-                          height: 13,
-                          width: 120,
-                          color: Colors.white,
+                          height: 14,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
-                        const SizedBox(height: 2),
+
+                        const SizedBox(height: 6),
+
+                        // Location row
                         Row(
                           children: [
                             Container(
-                              width: 12,
                               height: 12,
+                              width: 12,
                               decoration: const BoxDecoration(
-                                color: Colors.white,
+                                color: Colors.grey,
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: Container(
-                                height: 11,
-                                color: Colors.white,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
                               ),
                             ),
                           ],
                         ),
+
+                        const SizedBox(height: 14),
+
+                        // CTA Placeholder
+                        Container(
+                          height: 28,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
-
-
 }
+
+
