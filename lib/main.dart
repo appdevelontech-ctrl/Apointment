@@ -21,7 +21,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
         ChangeNotifierProvider(create: (_)=>HomeController()),
-        ChangeNotifierProvider(create: (_)=>UserProfileController()),
+
         ChangeNotifierProvider(create: (_) => HomeHeaderController()),
 
       ],

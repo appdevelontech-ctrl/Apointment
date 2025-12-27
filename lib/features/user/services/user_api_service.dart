@@ -221,7 +221,7 @@ class UserApiService {
     print("📤 Payload: $body");
 
     final response = await http.put(
-      Uri.parse("$baseUrl/update-user-vendor/$userId"),
+      Uri.parse("$baseUrl/update-user-details/$userId"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(body),
     );
@@ -256,6 +256,43 @@ class UserApiService {
       throw Exception("Home Header Exception: $e");
     }
   }
+  // =========================================================
+// UPDATE USER DETAILS (ADMIN PROFILE UPDATE)
+// API: /admin/update-user-details/:id
+// =========================================================
+  static Future<bool> updateUserDetails(
+      String userId,
+      Map<String, dynamic> body,
+      ) async {
+    try {
+      print("✏️ [ADMIN UPDATE USER]");
+      print("👤 UserId → $userId");
+      print("📤 Payload → $body");
+
+      final response = await http.put(
+        Uri.parse("$baseUrl/admin/update-user-details/$userId"),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode(body),
+      );
+
+      print(
+          "📥 UPDATE RESPONSE (${response.statusCode}): ${response.body}");
+
+      if (response.statusCode == 200 ||
+          response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return data["success"] == true;
+      }
+
+      return false;
+    } catch (e) {
+      print("❌ UPDATE USER ERROR → $e");
+      return false;
+    }
+  }
+
 
 
 }

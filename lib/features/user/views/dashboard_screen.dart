@@ -1,6 +1,5 @@
 import 'dart:ffi';
-import 'package:appointment_app/features/user/views/profile_screen.dart';
-import 'package:appointment_app/features/user/views/profilescreeen.dart';
+ import 'package:appointment_app/features/user/views/profilescreeen.dart';
 import 'package:appointment_app/features/user/views/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -9,6 +8,7 @@ import '../../../shared/utils/preferences.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/home_header_controller.dart';
 import '../providers/navigation_provider.dart';
+import '../services/user_api_service.dart';
 import '../widgets/dashboard_widgets.dart';
 import 'package:provider/provider.dart';
 import '../widgets/navigation_smooth.dart';
@@ -59,7 +59,10 @@ class _DashboardScreenState extends State<UserDashboardScreen>
       Provider.of<HomeController>(context, listen: false).loadHomeData();
       Provider.of<HomeHeaderController>(context, listen: false).loadHeaders();
     });
-    _loadUser();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await refreshUserFromApi();   // 🔥 IMPORTANT
+      await _loadUser();            // drawer refresh
+    });
     _startTypewriter();
   }
 
@@ -70,10 +73,35 @@ class _DashboardScreenState extends State<UserDashboardScreen>
     super.dispose();
   }
 
-  void _loadUser() async {
-    userData = await PrefUtils.getUserData();
-    if (mounted) setState(() {});
+  Future<void> _loadUser() async {
+    final data = await PrefUtils.getUserData();
+    if (!mounted) return;
+
+    setState(() {
+      userData = data;
+    });
   }
+
+  Future<void> refreshUserFromApi() async {
+    final userId = await PrefUtils.getUserId();
+    if (userId == null) return;
+
+    final apiProfile = await UserApiService.getCurrentUser(userId);
+
+    await PrefUtils.saveUserData({
+      "userId": apiProfile["_id"],
+      "name": apiProfile["username"],
+      "phone": apiProfile["phone"],
+      "email": apiProfile["email"],
+      "profile": apiProfile["profile"],
+      "city": apiProfile["city"],
+      "statename": apiProfile["statename"],
+      "pincode": apiProfile["pincode"],
+      "about": apiProfile["about"],
+    });
+  }
+
+
 
   void _startTypewriter() {
     _typewriterController.repeat(period: const Duration(seconds: 4));
@@ -243,7 +271,13 @@ class _DashboardScreenState extends State<UserDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: _profileDrawer(),
+      drawer: Builder(
+        builder: (context) {
+          _loadUser(); // 🔥 ALWAYS REFRESH WHEN DRAWER OPENS
+          return _profileDrawer();
+        },
+      ),
+
       extendBodyBehindAppBar: true,
       backgroundColor: Colors.white,
       body: Stack(
@@ -387,9 +421,7 @@ class _DashboardScreenState extends State<UserDashboardScreen>
 
                   SmoothNavigator.push(
                     context,
-                    ProfileDetailsScreen(
-                      userId: userData!["userId"],
-                    ),
+                      ProfileViewScreen()
                   );
                 },
 
@@ -903,7 +935,7 @@ class _DashboardScreenState extends State<UserDashboardScreen>
               }
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => ProfileDetailsScreen(userId: userData!["userId"])),
+                MaterialPageRoute(builder: (_) =>ProfileViewScreen()),
               );
             },
             child: Container(
@@ -951,12 +983,7 @@ class _DashboardScreenState extends State<UserDashboardScreen>
             ),
           ),
           const SizedBox(height: 8),
-          DrawerTile(
-            title: "Medical Records",
-            icon: Icons.folder_special,
-            onTap: () => Provider.of<NavigationProvider>(context, listen: false)
-                .navigateTo(context, const MedicalRecords()),
-          ),
+
           DrawerTile(
             title: "Appointments",
             icon: Icons.calendar_month,
@@ -964,35 +991,115 @@ class _DashboardScreenState extends State<UserDashboardScreen>
                 .navigateTo(context,   AppointmentHistoryScreen()),
           ),
           DrawerTile(
-            title: "Lab Tests",
-            icon: Icons.bloodtype,
-            onTap: () => Provider.of<NavigationProvider>(context, listen: false)
-                .navigateTo(context, const LabtestScreen()),
+            title: "Delete Account",
+            icon: Icons.delete_forever,
+            onTap: () => _showDeleteAccountDialog(),
           ),
-          DrawerTile(title: "Medicine Orders", icon: Icons.medication, onTap: () {}),
-          DrawerTile(title: "Online Consultations", icon: Icons.video_call, onTap: () {}),
-          DrawerTile(title: "Feedback", icon: Icons.feedback, onTap: () {}),
-          DrawerTile(title: "Payments", icon: Icons.payment, onTap: () {}),
-          const Spacer(),
+
+
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text(
               "Logout",
               style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
-            onTap: () async {
-              await PrefUtils.logout();
-              if (mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/user_login', (route) => false);
-              }
-            },
+            onTap: () => _showLogoutDialog(),
           ),
+
+
           const SizedBox(height: 10),
         ],
       ),
     );
   }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text("Delete Account"),
+        content: const Text(
+          "This action is permanent and cannot be undone.\n\nDo you want to continue?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+
+              // 🔥 TEMP BEHAVIOUR
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    "Delete account feature will be available soon",
+                  ),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            },
+            child: const Text("Delete",style: TextStyle(color: Colors.white),),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+              await PrefUtils.logout();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/user_login',
+                      (route) => false,
+                );
+              }
+            },
+            child: const Text("Logout",style: TextStyle(color: Colors.white),),
+          ),
+        ],
+      ),
+    );
+  }
+
 }
+
 class SliderShimmer extends StatelessWidget {
   const SliderShimmer({super.key});
 
