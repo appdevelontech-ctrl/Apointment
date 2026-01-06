@@ -32,18 +32,26 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
   }
 
   // Compare Time
-  bool timeMatch(String t1, String t2) {
+  bool timeMatch(String bookingTime, String slotOpenTime) {
+    // bookingTime = "10:00 AM - 06:00 PM"
+    // slotOpenTime = "10:00 AM"
+
+    final cleanTime = bookingTime.split(" - ").first.trim();
+
     final f = DateFormat("hh:mm a");
-    final a = f.parse(t1);
-    final b = f.parse(t2);
+    final a = f.parse(cleanTime);
+    final b = f.parse(slotOpenTime);
+
     return a.hour == b.hour && a.minute == b.minute;
   }
 
+
   // Fetch Doctor Details
   Future<void> fetchDoctorDetails() async {
-    final res = await http.get(Uri.parse(
-        "https://hospitalquee.onrender.com/get-vendor/${widget.doctorId}"));
-
+    final url= "https://hospitalquee.onrender.com/get-vendor/${widget.doctorId}";
+    final res = await http.get(Uri.parse(url));
+ print("Url is : $url");
+    print("Response is : ${res.body.toString()}");
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body)["Mpage"];
       doctor = DoctorDetailsModel.fromJson(data);
@@ -63,9 +71,9 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
 
     final url =
         "${ApiService.baseUrl}/admin/all-booking?search=&startDate=${DateFormat('yyyy-MM-dd').format(today)}&endDate=${DateFormat('yyyy-MM-dd').format(end)}&status=&productId=&type=3&userId=$selectedHospitalId";
-
+ print("Url is: $url");
     final response = await http.get(Uri.parse(url));
-
+    print("Response is : ${response.body.toString()}");
     if (response.statusCode == 200) {
       bookedAppointments = jsonDecode(response.body)["Order"];
     }
@@ -112,6 +120,29 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
   }
 
   // ------------------------- UI ------------------------------
+
+  void reduceSlotImmediately() {
+    if (selectedDate == null || selectedTimeSlot == null) return;
+
+    final dayIndex =
+    finalSlots.indexWhere((x) => x["date"] == selectedDate);
+
+    if (dayIndex == -1) return;
+
+    final slotIndex = finalSlots[dayIndex]["slots"]
+        .indexWhere((s) => s["slot"] == selectedTimeSlot);
+
+    if (slotIndex == -1) return;
+
+    setState(() {
+      finalSlots[dayIndex]["slots"][slotIndex]["left"] -= 1;
+
+      if (finalSlots[dayIndex]["slots"][slotIndex]["left"] < 0) {
+        finalSlots[dayIndex]["slots"][slotIndex]["left"] = 0;
+      }
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +246,7 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
             borderRadius: BorderRadius.circular(30),
           ),
         ),
-        onPressed: () {
+        onPressed: () async{
           if (!isSlotSelectedAndAvailable) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -226,19 +257,24 @@ class _DoctorDetailsScreenState extends State<DoctorDetailsScreen> {
             return;
           }
 
-          Navigator.push(
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => BookAppointmentScreen(
                 doctorId: doctor!.id,
                 doctorName: doctor!.name,
                 fee: doctor!.salary ?? 600,
-                selectedTime: selectedTimeSlot!, // "10:00 AM - 06:00 PM"
-                selectedDate: DateFormat('yyyy-MM-dd').format(selectedDate!), // "2025-12-12"
-                 selectedHospitalId: '$selectedHospitalId', // 🔥 ADD THIS
+                selectedTime: selectedTimeSlot!,
+                selectedDate: DateFormat('yyyy-MM-dd').format(selectedDate!),
+                selectedHospitalId: selectedHospitalId!,
               ),
             ),
           );
+
+          if (result == true) {
+            reduceSlotImmediately(); // 🔥 SLOT COUNT -1
+          }
+
 
 
 

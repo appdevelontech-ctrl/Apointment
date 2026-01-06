@@ -9,9 +9,9 @@ class BookAppointmentScreen extends StatefulWidget {
   final String doctorId;
   final String doctorName;
   final int fee;
-  final String selectedTime;       // "10:00 AM - 06:00 PM"
-  final String selectedDate;       // "yyyy-MM-dd"
-  final String selectedHospitalId; // hosId
+  final String selectedTime;
+  final String selectedDate;
+  final String selectedHospitalId;
 
   const BookAppointmentScreen({
     super.key,
@@ -28,7 +28,7 @@ class BookAppointmentScreen extends StatefulWidget {
 }
 
 class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
-  // ================= CONTROLLERS =================
+
   final TextEditingController nameCtrl = TextEditingController();
   final TextEditingController emailCtrl = TextEditingController();
   final TextEditingController phoneCtrl = TextEditingController();
@@ -39,7 +39,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   Map<String, dynamic>? userData;
   bool isBooking = false;
 
-  // ================= INIT =================
+
   @override
   void initState() {
     super.initState();
@@ -58,7 +58,6 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     setState(() {});
   }
 
-  // ================= BOOK APPOINTMENT =================
   Future<void> bookNow() async {
     if (nameCtrl.text.isEmpty ||
         phoneCtrl.text.isEmpty ||
@@ -86,14 +85,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       "requirement": requirementCtrl.text.trim(),
       "totalAmount": widget.fee,
 
-      // 🔥 BACKEND VERIFIED FORMAT
-      "date": widget.selectedDate,       // yyyy-MM-dd
-      "time": widget.selectedTime,       // "10:00 AM - 06:00 PM"
+
+      "date": widget.selectedDate,
+      "time": widget.selectedTime,
 
       "doctorId": widget.doctorId,
       "hosId": widget.selectedHospitalId,
     };
-
+   print("Payload $payload");
     try {
       final res = await http.post(
         Uri.parse("${ApiService.baseUrl}/book-appointment"),
@@ -155,10 +154,10 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     ),
                   ),
                   onPressed: () {
-                    Navigator.of(context).pop(); // close dialog
-                    Navigator.of(context)
-                        .popUntil((route) => route.isFirst); // go Home
+                    Navigator.of(context).pop(); // dialog close
+                    Navigator.of(context).pop(true); // 🔥 success signal
                   },
+
                   child: const Text(
                     "Go to Home",
                     style: TextStyle(color: Colors.white, fontSize: 16),
